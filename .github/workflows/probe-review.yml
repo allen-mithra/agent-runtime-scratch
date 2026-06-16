@@ -1,0 +1,28 @@
+name: probe-review
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  pull-requests: write
+  contents: read
+jobs:
+  reqchg:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Submit REQUEST_CHANGES as github-actions[bot]
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          R: ${{ github.repository }}
+        run: |
+          set +e
+          out=$(gh api -X POST "repos/$R/pulls/$PR/reviews" \
+                 -f event=REQUEST_CHANGES \
+                 -f body="probe: REQUEST_CHANGES from github-actions[bot]" 2>&1)
+          rc=$?
+          echo "POST_RC=$rc"
+          echo "POST_OUT<<EOF"; echo "$out"; echo "EOF"
+          # read back the state + author the API recorded
+          echo "REVIEWS:"
+          gh api "repos/$R/pulls/$PR/reviews" \
+            --jq '.[] | {author: .user.login, state: .state}'
